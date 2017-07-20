@@ -241,4 +241,9 @@ public class ElasticSearchActiveRecordTest extends TestCase {
         int rows = activeRecord.delete(DataEntity.class, idList);
         System.out.println(rows);
     }
+
+    @Test
+    public void testCreate() throws ElasticSearchException {
+        activeRecord.create(FunData.class);
+    }
 }

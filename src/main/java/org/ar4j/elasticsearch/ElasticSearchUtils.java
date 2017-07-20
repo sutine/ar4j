@@ -1,13 +1,12 @@
 package org.ar4j.elasticsearch;
 
 import org.ar4j.QueryResponse;
-import org.ar4j.elasticsearch.annotation.DocId;
-import org.ar4j.elasticsearch.annotation.DocParentId;
-import org.ar4j.elasticsearch.annotation.Index;
-import org.ar4j.elasticsearch.annotation.Type;
+import org.ar4j.elasticsearch.annotation.*;
+import org.ar4j.utils.AnnotationUtils;
 import org.ar4j.utils.BeanUtils;
 import org.ar4j.utils.JsonUtils;
 import org.ar4j.utils.StringUtils;
+import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteRequest;
@@ -20,19 +19,21 @@ import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.sort.SortBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 
 public class ElasticSearchUtils {
     private static Logger logger = LoggerFactory.getLogger(ElasticSearchUtils.class);
     private static long timeout = 5000;
 
-    public static <T> QueryResponse search(Class<T> clazz, ElasticSearchRequest query) {
+    public static <T> QueryResponse<T> search(ElasticSearchRequest query) {
+        Class<T> clazz = query.getClazz();
         SearchRequestBuilder request = ConnectionFactory.getConnection().prepareSearch(getIndex(clazz)).setTypes(getType(clazz))
 //                .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
 //                .setPostFilter(QueryBuilders.rangeQuery("age").from(12).to(18))     // Filter
@@ -46,22 +47,27 @@ public class ElasticSearchUtils {
         if (query.getQuery() != null)
             request.setQuery(query.getQuery());
 
+        if (query.getSorts() != null) {
+            for (SortBuilder sort : query.getSorts()) {
+                request.addSort(sort);
+            }
+        }
+
         SearchResponse resp = request.execute().actionGet();
 
         List<T> items = new LinkedList<>();
-        if (resp.getHits() != null) {
-            for (SearchHit hit : resp.getHits()) {
+        SearchHits hits = resp.getHits();
+        if (hits != null) {
+            for (SearchHit hit : hits) {
                 String source = hit.getSourceAsString();
                 items.add(JsonUtils.fromJson(source, clazz));
             }
         }
 
-        QueryResponse response = new QueryResponse<T>()
+        return new QueryResponse<T>()
                 .setItems(items)
                 .setTotal(resp.getHits().getTotalHits())
                 .setElapse(resp.getTookInMillis());
-
-        return response;
     }
 
     public static <T> T get(Class<T> clazz, String id) throws ElasticSearchException {
@@ -345,12 +351,35 @@ public class ElasticSearchUtils {
         return updateRequest;
     }
 
-    public static <T> String getIndex(Class clazz) {
-        if (clazz.isAnnotationPresent(Index.class)) {
-            Index annotation = (Index) clazz.getAnnotation(Index.class);
-            return annotation.value();
-        } else
-            return "";
+    /************************************/
+    public static void create(Class clazz) {
+        CreateIndexRequestBuilder createIndexRequestBuilder = ConnectionFactory.getConnection().admin().indices().prepareCreate(getIndex(clazz));
+        Object[] mappings = getMappings(clazz);
+        createIndexRequestBuilder.addMapping(getType(clazz), mappings);
+//        createIndexRequestBuilder.setSettings(getSettings(clazz));
+        createIndexRequestBuilder.execute().actionGet();
+    }
+
+    public static Object[] getSettings(Class clazz) {
+        String settings = AnnotationUtils.getAnnotationValue(clazz, TableSettings.class, "value");
+        return new Object[]{settings};
+    }
+
+    public static Object[] getMappings(Class clazz) {
+        List<Object> mappings = new ArrayList<>();
+        Field[] fields = BeanUtils.getDeclaredFields(clazz);
+        for (Field field : fields) {
+            String fieldSettings = AnnotationUtils.getAnnotationValue(field, TableField.class, "value");
+            if (StringUtils.isNotBlank(fieldSettings)) {
+                mappings.add(field.getName());
+                mappings.add(fieldSettings);
+            }
+        }
+        return mappings.toArray();
+    }
+
+    public static String getIndex(Class clazz) {
+        return AnnotationUtils.getAnnotationValue(clazz, Index.class, "value");
     }
 
     public static <T> String getIndex(T data) {
@@ -358,19 +387,11 @@ public class ElasticSearchUtils {
             return "";
 
         Class clazz = data.getClass();
-        if (clazz.isAnnotationPresent(Index.class)) {
-            Index annotation = data.getClass().getAnnotation(Index.class);
-            return annotation.value();
-        } else
-            return "";
+        return getIndex(clazz);
     }
 
     public static <T> String getType(Class clazz) {
-        if (clazz.isAnnotationPresent(Type.class)) {
-            Type annotation = (Type) clazz.getAnnotation(Type.class);
-            return annotation.value();
-        } else
-            return "";
+        return AnnotationUtils.getAnnotationValue(clazz, Type.class, "value");
     }
 
     public static <T> String getType(T data) {
@@ -378,11 +399,7 @@ public class ElasticSearchUtils {
             return "";
 
         Class clazz = data.getClass();
-        if (clazz.isAnnotationPresent(Type.class)) {
-            Type annotation = data.getClass().getAnnotation(Type.class);
-            return annotation.value();
-        } else
-            return "";
+        return getType(clazz);
     }
 
     private static <T> String getDocId(T data) throws ElasticSearchException {

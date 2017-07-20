@@ -9,9 +9,8 @@ import java.util.List;
 public class ElasticSearchActiveRecord implements ActiveRecord {
 
     @Override
-    public <T> QueryResponse query(Class<T> clazz, ElasticSearchRequest query) throws ElasticSearchException {
-        QueryResponse respnse = ElasticSearchUtils.search(clazz, query);
-        return respnse;
+    public <T> QueryResponse<T> query(ElasticSearchRequest query) throws ElasticSearchException {
+        return ElasticSearchUtils.search(query);
     }
 
     @Override
@@ -65,6 +64,11 @@ public class ElasticSearchActiveRecord implements ActiveRecord {
     @Override
     public <T> int upsert(List<T> list) throws ElasticSearchException {
         return ElasticSearchUtils.upsert(list, false);
+    }
+
+    @Override
+    public void create(Class clazz) throws ElasticSearchException {
+        ElasticSearchUtils.create(clazz);
     }
 
 }

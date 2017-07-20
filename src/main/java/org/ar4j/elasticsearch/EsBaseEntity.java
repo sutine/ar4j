@@ -1,11 +1,21 @@
 package org.ar4j.elasticsearch;
 
+import org.ar4j.elasticsearch.annotation.TableField;
+
 import java.util.Date;
 
 public class EsBaseEntity extends ElasticSearchActiveRecord/* implements Serializable*/ {
+
+    @TableField("type=integer")
     private Integer dataVersion = 1;
+
+    @TableField("type=date,format=yyyy-MM-dd HH:mm:ss.SSS")
     private Date dataCreateTime = new Date();
+
+    @TableField("type=date,format=yyyy-MM-dd HH:mm:ss.SSS")
     private Date dataUpdateTime = new Date();
+
+    @TableField("type=date,format=yyyy-MM-dd HH:mm:ss.SSS")
     private Date dataDeleteTime;
 
     public Integer getDataVersion() {

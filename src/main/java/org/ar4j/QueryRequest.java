@@ -1,18 +1,17 @@
 package org.ar4j;
 
-public class QueryRequest {
-    private Class<?> clazz;
+public class QueryRequest<T> {
+    private Class<T> clazz;
     private int offset = 0;
     private int size = 20;
     private String[] fields;
-    private String[] orderBy;
-    private Boolean desc;
+    private Sort[] orderBy;
 
-    public Class<?> getClazz() {
+    public Class<T> getClazz() {
         return clazz;
     }
 
-    public QueryRequest setClazz(Class<?> clazz) {
+    public QueryRequest setClazz(Class<T> clazz) {
         this.clazz = clazz;
         return this;
     }
@@ -44,21 +43,49 @@ public class QueryRequest {
         return this;
     }
 
-    public String[] getOrderBy() {
+    public Sort[] getOrderBy() {
         return orderBy;
     }
 
-    public QueryRequest setOrderBy(String[] orderBy) {
+    public QueryRequest setOrderBy(Sort[] orderBy) {
         this.orderBy = orderBy;
         return this;
     }
+}
 
-    public Boolean getDesc() {
-        return desc;
+class Sort {
+    public enum OrderType {
+        NONE, ASC, DESC;
     }
 
-    public QueryRequest setDesc(Boolean desc) {
-        this.desc = desc;
+    private String sortField;
+    private OrderType orderType = OrderType.NONE;
+    private String sortType = "field";
+
+    public String getSortField() {
+        return sortField;
+    }
+
+    public Sort setSortField(String sortField) {
+        this.sortField = sortField;
+        return this;
+    }
+
+    public OrderType getOrderType() {
+        return orderType;
+    }
+
+    public Sort setOrderType(OrderType orderType) {
+        this.orderType = orderType;
+        return this;
+    }
+
+    public String getSortType() {
+        return sortType;
+    }
+
+    public Sort setSortType(String sortType) {
+        this.sortType = sortType;
         return this;
     }
 }

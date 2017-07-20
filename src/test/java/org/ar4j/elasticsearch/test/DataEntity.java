@@ -10,6 +10,9 @@ import org.ar4j.elasticsearch.annotation.Type;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.sort.SortBuilder;
+import org.elasticsearch.search.sort.SortBuilders;
+import org.elasticsearch.search.sort.SortOrder;
 
 @Index("test_index")
 @Type("test_type")
@@ -30,10 +33,18 @@ public class DataEntity extends EsBaseEntity {
         return query;
     }
 
-    public <T> QueryResponse query() throws ElasticSearchException {
-        ElasticSearchRequest query = new ElasticSearchRequest().setQuery(buildQuery());
-        QueryResponse respnse = super.query(DataEntity.class, query);
-        return respnse;
+    private SortBuilder[] buildSorts() {
+        SortBuilder sort = SortBuilders.fieldSort("longField").order(SortOrder.DESC);
+        return new SortBuilder[]{sort};
+    }
+
+    public QueryResponse<DataEntity> query() throws ElasticSearchException {
+        ElasticSearchRequest query = new ElasticSearchRequest()
+                .setQuery(buildQuery())
+                .setSorts(buildSorts());
+
+        query.setClazz(DataEntity.class);
+        return query(query);
     }
 
     public String getId() {

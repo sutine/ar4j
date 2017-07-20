@@ -7,7 +7,6 @@ import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -34,7 +33,7 @@ public class ConnectionFactory {
                         .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(host), port));
             } catch (UnknownHostException e) {
                 logger.error("connect to elasticsearch server failed!", e);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 logger.error("load elasticsearch config failed!", e);
             }
         }
